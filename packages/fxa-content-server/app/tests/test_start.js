@@ -90,6 +90,7 @@ require('./spec/models/auth_brokers/fx-sync-channel');
 require('./spec/models/auth_brokers/fx-sync-web-channel');
 require('./spec/models/auth_brokers/index');
 require('./spec/models/auth_brokers/oauth-redirect');
+require('./spec/models/auth_brokers/oauth-webchannel-v1');
 require('./spec/models/auth_brokers/oauth-redirect-chrome-android');
 require('./spec/models/auth_brokers/pairing/authority');
 require('./spec/models/auth_brokers/pairing/remote-metadata');
