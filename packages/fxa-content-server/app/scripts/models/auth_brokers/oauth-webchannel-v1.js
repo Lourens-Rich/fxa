@@ -5,7 +5,6 @@
 /**
  * WebChannel OAuth broker that speaks 'v1' of the protocol.
  */
-
 import _ from 'underscore';
 import ChannelMixin from './mixins/channel';
 import Cocktail from 'cocktail';
@@ -41,12 +40,9 @@ const OAuthWebChannelBroker = OAuthRedirectAuthenticationBroker.extend({
     this._metrics = options.metrics;
 
     proto.initialize.call(this, options);
-
-    this.request(
-      this.getCommand('FXA_STATUS', {
-        service: this.relier.get('service'),
-      })
-    ).then(response => this.onFxaStatus(response));
+    this.request(this.getCommand('FXA_STATUS'), {
+      service: this.relier.get('service'),
+    }).then(response => this.onFxaStatus(response));
   },
 
   /**
@@ -94,16 +90,8 @@ const OAuthWebChannelBroker = OAuthRedirectAuthenticationBroker.extend({
 
   DELAY_BROKER_RESPONSE_MS: 100,
 
-  sendOAuthResultToRelier(result, account) {
+  sendOAuthResultToRelier(result) {
     return this._metrics.flush().then(() => {
-      const extraParams = {};
-      if (result.error) {
-        extraParams.error = result.error;
-      }
-      if (result.action) {
-        extraParams.action = result.action;
-      }
-
       result.redirect = Constants.OAUTH_WEBCHANNEL_REDIRECT;
 
       return this.send(this.getCommand('OAUTH_LOGIN'), result);

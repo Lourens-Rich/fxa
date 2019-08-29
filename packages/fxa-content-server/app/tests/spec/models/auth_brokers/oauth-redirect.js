@@ -196,6 +196,28 @@ describe('models/auth_brokers/oauth-redirect', () => {
         );
       });
     });
+
+    it('handles declinedSyncEngines and offeredSyncEngines', () => {
+      account.set('declinedSyncEngines', ['history']);
+      account.set('offeredSyncEngines', ['history']);
+
+      sinon.stub(broker, 'getOAuthResult').callsFake(() => {
+        return Promise.resolve({});
+      });
+
+      sinon.stub(broker, 'sendOAuthResultToRelier').callsFake(() => {
+        return Promise.resolve();
+      });
+
+      return broker
+        .persistVerificationData(account)
+        .then(() => {
+          return broker.finishOAuthFlow(account);
+        })
+        .then(result => {
+          assert.equal(result, 'thing here!');
+        });
+    });
   });
 
   describe('afterResetPasswordConfirmationPoll', function() {

@@ -24,6 +24,7 @@ function generateOAuthCode() {
   return code;
 }
 
+const OAUTH_STATUS_MESSAGE = 'fxaccounts:fxa_status';
 const OAUTH_LOGIN_MESSAGE = 'fxaccounts:oauth_login';
 const REDIRECT_URI = 'https://127.0.0.1:8080';
 const VALID_OAUTH_CODE = generateOAuthCode();
@@ -59,12 +60,12 @@ describe('models/auth_brokers/oauth-webchannel-v1', () => {
       flush: sinon.spy(() => Promise.resolve()),
       logEvent: () => {},
     };
-    relier = new Relier();
-    relier.set({
+    relier = new Relier({
       action: 'action',
       clientId: 'clientId',
       redirectUri: REDIRECT_URI,
       scope: 'scope',
+      service: 'service',
       state: 'state',
     });
     user = new User();
@@ -72,6 +73,9 @@ describe('models/auth_brokers/oauth-webchannel-v1', () => {
     windowMock = new WindowMock();
     channelMock = new NullChannel();
     channelMock.send = sinon.spy(() => {
+      return Promise.resolve();
+    });
+    channelMock.request = sinon.spy(() => {
       return Promise.resolve();
     });
 
@@ -91,7 +95,30 @@ describe('models/auth_brokers/oauth-webchannel-v1', () => {
     sinon.spy(broker, 'finishOAuthFlow');
   });
 
-  describe('with an error', () => {
+  it('status message', () => {
+    const statusMsg = channelMock.request.getCall(0).args;
+    assert.equal(statusMsg[0], OAUTH_STATUS_MESSAGE);
+    assert.deepEqual(statusMsg[1], { service: 'service' });
+  });
+
+  it('passes code and state', () => {
+    return broker
+      .sendOAuthResultToRelier({
+        code: 'code',
+        state: 'state',
+      })
+      .then(() => {
+        const loginMsg = channelMock.send.getCall(0).args;
+        assert.equal(loginMsg[0], OAUTH_LOGIN_MESSAGE);
+        assert.deepEqual(loginMsg[1], {
+          code: 'code',
+          state: 'state',
+          redirect: Constants.OAUTH_WEBCHANNEL_REDIRECT,
+        });
+      });
+  });
+
+  describe('login with an error', () => {
     it('appends an error query parameter', () => {
       return broker
         .sendOAuthResultToRelier({
@@ -100,9 +127,9 @@ describe('models/auth_brokers/oauth-webchannel-v1', () => {
         .then(() => {
           assert.isTrue(metrics.flush.calledOnce);
           assert.lengthOf(metrics.flush.getCall(0).args, 0);
-          const message = channelMock.send.getCall(0).args;
-          assert.equal(message[0], OAUTH_LOGIN_MESSAGE);
-          assert.deepEqual(message[1], {
+          const loginMsg = channelMock.send.getCall(0).args;
+          assert.equal(loginMsg[0], OAUTH_LOGIN_MESSAGE);
+          assert.deepEqual(loginMsg[1], {
             error: 'error',
             redirect: Constants.OAUTH_WEBCHANNEL_REDIRECT,
           });
@@ -110,7 +137,7 @@ describe('models/auth_brokers/oauth-webchannel-v1', () => {
     });
   });
 
-  describe('with an action', () => {
+  describe('login with an action', () => {
     it('appends an action query parameter', () => {
       var action = Constants.OAUTH_ACTION_SIGNIN;
       return broker
@@ -118,9 +145,9 @@ describe('models/auth_brokers/oauth-webchannel-v1', () => {
           action: action,
         })
         .then(() => {
-          const message = channelMock.send.getCall(0).args;
-          assert.equal(message[0], OAUTH_LOGIN_MESSAGE);
-          assert.deepEqual(message[1], {
+          const loginMsg = channelMock.send.getCall(0).args;
+          assert.equal(loginMsg[0], OAUTH_LOGIN_MESSAGE);
+          assert.deepEqual(loginMsg[1], {
             action: action,
             redirect: Constants.OAUTH_WEBCHANNEL_REDIRECT,
           });
@@ -128,16 +155,16 @@ describe('models/auth_brokers/oauth-webchannel-v1', () => {
     });
   });
 
-  describe('with existing query parameters', () => {
+  describe('login with existing query parameters', () => {
     it('passes through existing parameters unchanged', () => {
       return broker
         .sendOAuthResultToRelier({
           error: 'error',
         })
         .then(() => {
-          const message = channelMock.send.getCall(0).args;
-          assert.equal(message[0], OAUTH_LOGIN_MESSAGE);
-          assert.deepEqual(message[1], {
+          const loginMsg = channelMock.send.getCall(0).args;
+          assert.equal(loginMsg[0], OAUTH_LOGIN_MESSAGE);
+          assert.deepEqual(loginMsg[1], {
             error: 'error',
             redirect: Constants.OAUTH_WEBCHANNEL_REDIRECT,
           });

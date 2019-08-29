@@ -345,8 +345,10 @@ export default BaseAuthenticationBroker.extend({
       this.clearOriginalTabMarker();
       return this.getOAuthResult(account).then(result => {
         result = _.extend(result, additionalResultData);
-        result.declinedSyncEngines = account.get('declinedSyncEngines');
-        result.offeredSyncEngines = account.get('offeredSyncEngines');
+        if (account.get('declinedSyncEngines')) {
+          result.declinedSyncEngines = account.get('declinedSyncEngines');
+          result.offeredSyncEngines = account.get('offeredSyncEngines');
+        }
 
         return this.sendOAuthResultToRelier(result);
       });
